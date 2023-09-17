@@ -19,7 +19,7 @@ hyperparameters.update({
     "regularization_lambda": 1e-4,
 
     "train_for_steps": 500,
-    "save_network_every_steps": 100,
+    "save_network_every_steps": 500,
 })
 task_parameters.update({
     "task_name": "2DIR1O",

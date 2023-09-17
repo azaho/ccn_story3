@@ -80,6 +80,9 @@ def update_random_seed():
             hyperparameters["regularization_lambda"] == 0:
         hyperparameters["regularization_lambda"] = 0
         hyperparameters["regularization"] = "None"
+    random.seed(hyperparameters["random_seed"])
+    torch.manual_seed(hyperparameters["random_seed"])
+    np.random.seed(hyperparameters["random_seed"])
 update_random_seed()
 
 def save_analysis_notebooks(directory, args):
@@ -147,11 +150,6 @@ def save_metadata(directory, task, model, result, path=None):
 # pref1 and pref2 are preferred directions between the units, in degrees
 def legi(pref1, pref2):
     return torch.cos((pref1-pref2)/180 * torch.pi)
-
-
-random.seed(hyperparameters["random_seed"])
-torch.manual_seed(hyperparameters["random_seed"])
-np.random.seed(hyperparameters["random_seed"])
 
 
 class Task:

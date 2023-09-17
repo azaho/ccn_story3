@@ -8,6 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
+parser.add_argument('--scale_factor', type=float, help='determines ratio between input-ring and ring-ring connection strengths', default=7)
 args = parser.parse_args()
 # PARSER END
 
@@ -27,8 +28,9 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "hdnotricksCTRNN",
-    "dim_recurrent": args.net_size
+    "model_name": "hdnotricksfixedCTRNN",
+    "dim_recurrent": args.net_size,
+    "scale_factor": args.scale_factor
 })
 additional_comments += [
     "Simple ring attractor network, training is on top-level parameters + output layer"
@@ -57,20 +59,19 @@ class Model(Model):
         self.IN_pref = torch.arange(task_parameters["input_direction_units"])/task_parameters["input_direction_units"]*360
 
         # TRAINABLE PARAMETERS:
-        # 1: input->R1 curve magnitude
-        # 1: R1->R1 curve magnitude
-        # 2: R1 bias
-        self.top_parameters = nn.Parameter(torch.tensor([0.2, 0.2, -0.1]))
+        # 1: input->R1 curve magnitude, equal to R1->R1 curve magnitude / scale_factor
+        # 3: R1 bias
+        self.top_parameters = nn.Parameter(torch.tensor([0.03, -0.1]))
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
     # noise has shape (batch_size, total_time, dim_recurrent) or (total_time, dim_recurrent)
     def forward(self, input, noise):
         # build matrices based on top-level parameters
-        self.W_h_ah = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[1]
+        self.W_h_ah = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0] * model_parameters["scale_factor"]
         self.W_x_ah = legi(self.R1_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(R1_pref), 1)) * self.top_parameters[0]
         self.W_x_ah = torch.cat((self.W_x_ah, torch.zeros(len(R1_pref)).unsqueeze(1)), 1) # go cue has zero weights
-        self.b_ah = torch.ones_like(self.b_ah) * self.top_parameters[2]
+        self.b_ah = torch.ones_like(self.b_ah) * self.top_parameters[1]
 
         if len(input.shape) == 2:
             # if input has size (total_time, dim_input) (if there is only a single trial), add a singleton dimension

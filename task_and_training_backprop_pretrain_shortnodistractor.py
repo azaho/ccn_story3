@@ -43,10 +43,10 @@ if __name__ == "__main__":
     model = Model()
 
     task_parameters["delay1_from"] = 10
-    task_parameters["delay1_to"] = 45
+    task_parameters["delay1_to"] = 30
     task_parameters["delay2_from"] = 60
     task_parameters["delay2_to"] = 80
-    hyperparameters["train_for_steps"] = 1000
+    hyperparameters["train_for_steps"] = 2000
     task_parameters["distractor_visible"] = False
     directory = update_directory_name()
     task = Task()
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     task_parameters["delay1_to"] = 90
     task_parameters["delay2_from"] = 120
     task_parameters["delay2_to"] = 160
-    hyperparameters["train_for_steps"] = 10000
+    hyperparameters["train_for_steps"] = 30000
     task_parameters["distractor_visible"] = True
     directory = update_directory_name()
     task = Task()

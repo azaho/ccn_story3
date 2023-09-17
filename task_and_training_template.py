@@ -67,6 +67,7 @@ def update_directory_name():
     directory += f"_la{hyperparameters['regularization_lambda']}"
     if "shift_amount" in model_parameters: directory += f"_sa{model_parameters['shift_amount']}"
     if "legi_exponent" in model_parameters: directory += f"_le{model_parameters['legi_exponent']}"
+    if "scale_factor" in model_parameters: directory += f"_sf{model_parameters['scale_factor']}"
     directory += f"_r{hyperparameters['random_string']}"
     if task_parameters['distractor_visible']: directory += "_dv"
     directory += "/"  # needs to end with a slash

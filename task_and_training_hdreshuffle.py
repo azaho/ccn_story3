@@ -30,6 +30,7 @@ task_parameters.update({
 model_parameters.update({
     "model_name": "hdreshuffleCTRNN",
     "dim_recurrent": args.net_size,
+    "dim_input": args.net_size + 1,  # plus one input for go cue signal
     "shift_amount": args.shift_amount
 })
 additional_comments += [

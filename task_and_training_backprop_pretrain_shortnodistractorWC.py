@@ -8,7 +8,6 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-4)
 args = parser.parse_args()
 # PARSER END
 
@@ -16,8 +15,8 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "L2",  # options: L1, L2, None
-    "regularization_lambda": args.la,
+    "regularization": "spatial_embedding",  # options: L1, L2, None
+    "regularization_lambda": 3e-5,
 
     "train_for_steps": 500,
     "save_network_every_steps": 1000,
@@ -28,7 +27,7 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "backproprdCTRNN",
+    "model_name": "backpropndCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
@@ -41,40 +40,27 @@ directory = update_directory_name()
 update_random_seed()
 
 if __name__ == "__main__":
-
     # train the network and save weights
+    model = Model()
+
     task_parameters["delay1_from"] = 10
-    task_parameters["delay1_to"] = 50
-    task_parameters["delay2_from"] = 70
-    task_parameters["delay2_to"] = 90
-    model_parameters["dim_output"] = 4
-    task_parameters["dim_output"] = 4
-    hyperparameters["train_for_steps"] = 2000
-    task_parameters["distractor_visible"] = True
+    task_parameters["delay1_to"] = 30
+    task_parameters["delay2_from"] = 60
+    task_parameters["delay2_to"] = 80
+    hyperparameters["train_for_steps"] = 500
+    task_parameters["distractor_visible"] = False
     directory = update_directory_name()
-    model_pretrain = Model()
-    task = Task_outputO1O2()
-    result = train_network(model_pretrain, task, directory)
+    task = Task()
+    result = train_network(model, task, directory)
 
-    # train the network and save weights
     print("===== SWITCHING =====")
     task_parameters["delay1_from"] = 10
-    task_parameters["delay1_to"] = 120
-    task_parameters["delay2_from"] = 140
+    task_parameters["delay1_to"] = 90
+    task_parameters["delay2_from"] = 120
     task_parameters["delay2_to"] = 160
-    hyperparameters["train_for_steps"] = 10000
-    model_parameters["dim_output"] = 2
-    task_parameters["dim_output"] = 2
+    hyperparameters["train_for_steps"] = 1000
     task_parameters["distractor_visible"] = True
     directory = update_directory_name()
-    model = Model()
-    with torch.no_grad():
-        model.fc_h2ah.weight = torch.nn.Parameter(model_pretrain.fc_h2ah.weight)
-        model.fc_h2y.weight = torch.nn.Parameter(model_pretrain.fc_h2y.weight[:2])
-        model.fc_x2ah.weight = torch.nn.Parameter(model_pretrain.fc_x2ah.weight)
-        model.fc_x2ah.bias = torch.nn.Parameter(model_pretrain.fc_x2ah.bias)
-    del model_pretrain
-    del task
     task = Task()
     result = train_network(model, task, directory)
 

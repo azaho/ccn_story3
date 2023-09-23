@@ -28,7 +28,8 @@ task_parameters.update({
 })
 model_parameters.update({
     "model_name": "hdgatingCTRNN",
-    "dim_recurrent": args.net_size
+    "dim_recurrent": args.net_size,
+    "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 additional_comments += [
     "Gating network, training is on top-level parameters + output layer"

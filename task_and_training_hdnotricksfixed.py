@@ -30,6 +30,7 @@ task_parameters.update({
 model_parameters.update({
     "model_name": "hdnotricksfixedCTRNN",
     "dim_recurrent": args.net_size,
+    "dim_input": args.net_size + 1,  # plus one input for go cue signal
     "scale_factor": args.scale_factor
 })
 additional_comments += [

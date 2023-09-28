@@ -8,7 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-3)
+parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-2)
 args = parser.parse_args()
 # PARSER END
 
@@ -16,7 +16,7 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "spatial_embedding",  # options: L1, L2, None
+    "regularization": "AC",  # options: L1, L2, None
     "regularization_lambda": args.la,
 
     "train_for_steps": 500,
@@ -28,7 +28,7 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "backpropndwcCTRNN",
+    "model_name": "backpropndecCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })

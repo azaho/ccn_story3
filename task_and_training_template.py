@@ -29,8 +29,8 @@ task_parameters = {
     "input_direction_units": net_size,  # how many direction-selective input units?
 
     "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
-    "delay1_from": 10, "delay1_to": 120,
-    "delay2_from": 140, "delay2_to": 160,
+    "delay1_from": 10, "delay1_to": 90,
+    "delay2_from": 120, "delay2_to": 160,
 
     "show_direction_for": 10,  # in timesteps
     "show_cue_for": 100,  # in timesteps
@@ -56,6 +56,17 @@ additional_comments = [
     "Inputs NOT discretized",
     "Output sin/cos",
 ]
+
+pretrain_delays = {
+    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay1_from": 10, "delay1_to": 50,
+    "delay2_from": 70, "delay2_to": 90,
+}
+final_delays = {
+    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay1_from": 10, "delay1_to": 90,
+    "delay2_from": 120, "delay2_to": 160,
+}
 
 #%FINAL_PARAMETERS_HERE%
 
@@ -412,7 +423,9 @@ class Model(torch.nn.Module):
         output = self.fc_h2y(hstore)
         return output, hstore
 
-    def save_firing_rates(self, task, path, resolution=8, noise_amplitude=0):
+    def save_firing_rates(self, task, path, resolution=8, noise_amplitude=None):
+        if noise_amplitude is None: noise_amplitude = 0
+
         delay0, delay1, delay2 = task.get_median_delays()
         delay1 = task_parameters["delay1_to"]  # maximum delay before distractor, to ensure convergence
 
@@ -469,7 +482,7 @@ def train_network(model, task, directory):
         regularization_norm = "spatial_embedding"
         regularization_lambda = hyperparameters["regularization_lambda"]
     if hyperparameters["regularization"].upper() == "AC":
-        regularization_norm = "AC"
+        regularization_norm = "L1_activity"
         regularization_lambda = hyperparameters["regularization_lambda"]
     clip_gradients = hyperparameters["clip_gradients"]
     max_gradient_norm = hyperparameters["max_gradient_norm"]
@@ -522,7 +535,7 @@ def train_network(model, task, directory):
 
             error += regularization_lambda * torch.sum(W * d * s)
         if regularization_norm == "L1_activity":
-            error += regularization_lambda * np.sum(np.abs(h)) / np.prod(h.shape)
+            error += regularization_lambda * torch.sum(torch.abs(h)) / np.prod(h.shape)
 
         error_store[p] = error.item()
         error_store_o1[p] = error_o1

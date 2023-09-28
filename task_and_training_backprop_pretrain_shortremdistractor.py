@@ -43,13 +43,10 @@ update_random_seed()
 if __name__ == "__main__":
 
     # train the network and save weights
-    task_parameters["delay1_from"] = 10
-    task_parameters["delay1_to"] = 50
-    task_parameters["delay2_from"] = 70
-    task_parameters["delay2_to"] = 90
+    task_parameters.update(pretrain_delays)
     model_parameters["dim_output"] = 4
     task_parameters["dim_output"] = 4
-    hyperparameters["train_for_steps"] = 2000
+    hyperparameters["train_for_steps"] = 1000
     task_parameters["distractor_visible"] = True
     directory = update_directory_name()
     model_pretrain = Model()
@@ -58,10 +55,7 @@ if __name__ == "__main__":
 
     # train the network and save weights
     print("===== SWITCHING =====")
-    task_parameters["delay1_from"] = 10
-    task_parameters["delay1_to"] = 120
-    task_parameters["delay2_from"] = 140
-    task_parameters["delay2_to"] = 160
+    task_parameters.update(final_delays)
     hyperparameters["train_for_steps"] = 10000
     model_parameters["dim_output"] = 2
     task_parameters["dim_output"] = 2
@@ -80,6 +74,6 @@ if __name__ == "__main__":
 
     save_metadata(directory, task, model, result)
     save_training_data(directory, result)
-    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy", noise_amplitude=hyperparameters["noise_amplitude"])
+    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
     save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
     save_analysis_notebooks(directory, args)

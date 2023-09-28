@@ -104,6 +104,6 @@ if __name__ == "__main__":
 
     save_metadata(directory, task, model, result)
     save_training_data(directory, result)
-    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy", noise_amplitude=hyperparameters["noise_amplitude"])
+    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
     save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
     save_analysis_notebooks(directory, args)

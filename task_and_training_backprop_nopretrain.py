@@ -8,7 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-2)
+parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-4)
 args = parser.parse_args()
 # PARSER END
 
@@ -16,7 +16,7 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "AC",  # options: L1, L2, None
+    "regularization": "L2",  # options: L1, L2, None
     "regularization_lambda": args.la,
 
     "train_for_steps": 500,
@@ -28,7 +28,7 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "backpropndecCTRNN",
+    "model_name": "backpropnpCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
@@ -40,20 +40,18 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
+train_delays = {
+    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay1_from": 10, "delay1_to": 90,
+    "delay2_from": 120, "delay2_to": 160,
+}
+
 if __name__ == "__main__":
     # train the network and save weights
     model = Model()
 
-    task_parameters.update(pretrain_delays)
-    hyperparameters["train_for_steps"] = 500
-    task_parameters["distractor_visible"] = False
-    directory = update_directory_name()
-    task = Task()
-    result = train_network(model, task, directory)
-
-    print("===== SWITCHING =====")
-    task_parameters.update(final_delays)
-    hyperparameters["train_for_steps"] = 1500
+    task_parameters.update(train_delays)
+    hyperparameters["train_for_steps"] = 30000
     task_parameters["distractor_visible"] = True
     directory = update_directory_name()
     task = Task()

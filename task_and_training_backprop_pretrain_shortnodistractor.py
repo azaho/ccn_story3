@@ -45,7 +45,7 @@ if __name__ == "__main__":
     model = Model()
 
     task_parameters.update(pretrain_delays)
-    hyperparameters["train_for_steps"] = 1000
+    hyperparameters["train_for_steps"] = 500
     task_parameters["distractor_visible"] = False
     directory = update_directory_name()
     task = Task()
@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     print("===== SWITCHING =====")
     task_parameters.update(final_delays)
-    hyperparameters["train_for_steps"] = 10000
+    hyperparameters["train_for_steps"] = 1500
     task_parameters["distractor_visible"] = True
     directory = update_directory_name()
     task = Task()

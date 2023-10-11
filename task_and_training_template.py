@@ -59,8 +59,8 @@ additional_comments = [
 
 pretrain_delays = {
     "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
-    "delay1_from": 10, "delay1_to": 50,
-    "delay2_from": 70, "delay2_to": 90,
+    "delay1_from": 10, "delay1_to": 30,
+    "delay2_from": 60, "delay2_to": 80,
 }
 final_delays = {
     "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)

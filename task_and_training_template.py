@@ -41,7 +41,6 @@ task_parameters = {
     "show_cue_for": 100,  # in timesteps
     "dim_input": net_size + 1,  # plus one input for go cue signal
     "dim_output": 2,
-    "distractor_visible": True,  # train with or without distractor (distractor = O2)?
     "distractor_probability": 0.5  # probability that the distractor will be present on any given trial
 }
 
@@ -85,8 +84,8 @@ def update_directory_name():
     if "shuffle_amount" in model_parameters: directory += f"_sa{model_parameters['shuffle_amount']}"
     if "legi_exponent" in model_parameters: directory += f"_le{model_parameters['legi_exponent']}"
     if "scale_factor" in model_parameters: directory += f"_sf{model_parameters['scale_factor']}"
+    directory += f"_dp{task_parameters['distractor_probability']}"
     directory += f"_r{hyperparameters['random_string']}"
-    if task_parameters['distractor_visible']: directory += "_dv"
     directory += "/"  # needs to end with a slash
     return directory
 directory = update_directory_name()
@@ -128,7 +127,7 @@ task_parameters["delay1_from"] = {task_parameters["delay1_from"]}
 task_parameters["delay1_to"] = {task_parameters["delay1_to"]}
 task_parameters["delay2_from"] = {task_parameters["delay2_from"]}
 task_parameters["delay2_to"] = {task_parameters["delay2_to"]}
-task_parameters["distractor_visible"] = {task_parameters["distractor_visible"]}
+task_parameters["distractor_probability"] = {task_parameters["distractor_probability"]}
 """)
         f.seek(0)
         f.write(data)
@@ -160,7 +159,7 @@ def save_metadata(directory, task, model, result, path=None):
 
         "errors_last": result["errors_last"],
         "errors_best": result["errors_best"],
-        "error_final": task.evaluate_model(model, show_distractor=True, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network (for a CCN submission)
+        "error_distractor": task.evaluate_model(model, distractor_probability=1, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network (for a CCN submission)
 
         "error_store_saved": result["error_store_saved"]  # MSE of the network on every training step where the weights were saved
     }
@@ -250,7 +249,7 @@ class Task:
     # generate one trial of the task (there will be batch_size of them in the batch)
     # direction1 and direction2 in degrees
     # output tensors: input, target, mask (which timesteps to include in the loss function)
-    def _make_trial(self, direction1, direction2, delay0, delay1, delay2, show_distractor=True):
+    def _make_trial(self, direction1, direction2, delay0, delay1, delay2, distractor_probability=0):
         # generate the tensor of inputs
         i_direction1 = torch.zeros(task_parameters["dim_input"])
         i_direction1[:task_parameters["input_direction_units"]] = self._input_direction_representation(direction1)
@@ -258,7 +257,7 @@ class Task:
         i_direction2 = torch.zeros(task_parameters["dim_input"])
         i_direction2[:task_parameters["input_direction_units"]] = self._input_direction_representation(direction2)
         i_direction2 = i_direction2.repeat(task_parameters["show_direction_for"], 1)
-        i_direction2 = i_direction2*(1 if show_distractor and (random.random()<task_parameters["distractor_probability"]) else 0)
+        i_direction2 = i_direction2*(1 if random.random() < distractor_probability else 0)
         i_delay0 = torch.zeros((delay0, task_parameters["dim_input"]))
         i_delay2 = torch.zeros((delay2, task_parameters["dim_input"]))
 
@@ -282,13 +281,13 @@ class Task:
     # generate a batch (of size batch_size)
     # all trials in batch have the same (delay0, delay1, delay2) but direction1 and direction2 vary (are random)
     # returns shapes (batch_size, total_time, dim_input), (batch_size, total_time, dim_output), (batch_size, total_time)
-    def make_random_directions_batch(self, batch_size, delay0, delay1, delay2, show_distractor=True):
+    def make_random_directions_batch(self, batch_size, delay0, delay1, delay2, distractor_probability=0):
         batch = []  # inputs in the batch
         batch_labels = []  # target outputs in the batch
         output_masks = []  # masks in the batch
         for j in range(batch_size):
             direction1, direction2, *_ = self.choose_trial_parameters(None, None, delay0, delay1, delay2)
-            i_full, o_full, b_mask = self._make_trial(direction1, direction2, delay0, delay1, delay2, show_distractor=show_distractor)
+            i_full, o_full, b_mask = self._make_trial(direction1, direction2, delay0, delay1, delay2, distractor_probability=distractor_probability)
             batch.append(i_full.unsqueeze(0))
             batch_labels.append(o_full.unsqueeze(0))
             output_masks.append(b_mask.unsqueeze(0))
@@ -297,13 +296,13 @@ class Task:
     # generate a batch (of size 180/resolution * 180/resolution)
     # all trials in batch have the same (delay0, delay1, delay2) but direction1 and direction2 vary (all int values, up to resolution)
     # returns shapes (batch_size, total_time, dim_input), (batch_size, total_time, dim_output), (batch_size, total_time)
-    def make_all_integer_directions_batch(self, delay0, delay1, delay2, resolution=16, show_distractor=True):
+    def make_all_integer_directions_batch(self, delay0, delay1, delay2, resolution=16, distractor_probability=0):
         batch = []  # inputs in the batch
         batch_labels = []  # target outputs in the batch
         output_masks = []  # masks in the batch
         for direction1 in np.arange(resolution)/resolution*360:
             for direction2 in np.arange(resolution)/resolution*360:
-                i_full, o_full, b_mask = self._make_trial(direction1, direction2, delay0, delay1, delay2, show_distractor=show_distractor)
+                i_full, o_full, b_mask = self._make_trial(direction1, direction2, delay0, delay1, delay2, distractor_probability=distractor_probability)
                 batch.append(i_full.unsqueeze(0))
                 batch_labels.append(o_full.unsqueeze(0))
                 output_masks.append(b_mask.unsqueeze(0))
@@ -339,9 +338,9 @@ class Task:
         return mse_o1, mse_o2, angle_error_o1, angle_error_o2
 
     # evaluate MSE and angle errors based on median delays, from the all integer direction batch
-    def evaluate_model(self, model, noise_amplitude=0, direction_resolution=6, show_distractor=True):
+    def evaluate_model(self, model, noise_amplitude=0, direction_resolution=6, distractor_probability=0):
         # run the model on all possible directions
-        ao_input, ao_target, ao_mask = self.make_all_integer_directions_batch(*self.get_median_delays(), direction_resolution, show_distractor=show_distractor)
+        ao_input, ao_target, ao_mask = self.make_all_integer_directions_batch(*self.get_median_delays(), direction_resolution, distractor_probability=distractor_probability)
         ao_noise_mask = self.get_noise_mask(*self.get_median_delays())
         ao_noise_mask = ao_noise_mask.repeat(ao_input.shape[0], 1).unsqueeze(2).repeat(1, 1, model.dim_recurrent)  # convert to (batch_size, total_time, dim_recurrent)
         ao_noise = torch.randn_like(ao_noise_mask) * ao_noise_mask * noise_amplitude
@@ -425,14 +424,14 @@ class Model(torch.nn.Module):
         output = self.fc_h2y(hstore)
         return output, hstore
 
-    def save_firing_rates(self, task, path, resolution=8, noise_amplitude=None):
+    def save_firing_rates(self, task, path, resolution=8, noise_amplitude=None, distractor_probability=1):
         if noise_amplitude is None: noise_amplitude = 0
 
         delay0, delay1, delay2 = task.get_median_delays()
         delay1 = task_parameters["delay1_to"]  # maximum delay before distractor, to ensure convergence
 
         ao_input, ao_target, ao_mask = task.make_all_integer_directions_batch(delay0, delay1, delay2,
-                                                                              show_distractor=True, resolution=resolution)
+                                                                              distractor_probability=distractor_probability, resolution=resolution)
         ao_noise_mask = task.get_noise_mask(delay0, delay1, delay2)
         ao_noise_mask = ao_noise_mask.repeat(ao_input.shape[0], 1).unsqueeze(2).repeat(1, 1,
                                                                                        self.dim_recurrent)  # convert to (batch_size, total_time, dim_recurrent)
@@ -486,7 +485,7 @@ def train_network(model, task, directory):
     best_network_error = None
     for p in range(max_steps + 1):
         _, _, delay0, delay1, delay2 = task.choose_trial_parameters()  # choose the delays for this batch
-        input, target, output_mask = task.make_random_directions_batch(batch_size, delay0, delay1, delay2, show_distractor=task_parameters["distractor_visible"])
+        input, target, output_mask = task.make_random_directions_batch(batch_size, delay0, delay1, delay2, distractor_probability=task_parameters["distractor_probability"])
         noise_mask = task.get_noise_mask(delay0, delay1, delay2)
         noise_mask = noise_mask.repeat(batch_size, 1).unsqueeze(2).repeat(1, 1, model.dim_recurrent)  # convert to (batch_size, total_time, dim_recurrent)
         noise = torch.randn_like(noise_mask) * noise_mask * noise_amplitude
@@ -536,7 +535,7 @@ def train_network(model, task, directory):
         # don't train on step 0, just store error and initialize "best" network
         if p == 0:
             error_store_saved[0] = error.item()
-            evaluation_thisnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
+            evaluation_thisnetwork = task.evaluate_model(model, distractor_probability=task_parameters["distractor_probability"], noise_amplitude=hyperparameters["noise_amplitude"])
 
             best_network_dict = model.state_dict()
             best_network_error = error.item()
@@ -577,7 +576,7 @@ def train_network(model, task, directory):
             left_time = left_steps / made_steps * passed_time
             print(f" = took {passed_time:.1f}s for {made_steps} steps, estimated time left {str(datetime.timedelta(seconds=int(left_time)))}")
             last_time = time.time()
-            evaluation_thisnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
+            evaluation_thisnetwork = task.evaluate_model(model, distractor_probability=task_parameters["distractor_probability"], noise_amplitude=hyperparameters["noise_amplitude"])
             print(" = performance: ", *(f"{x:.4f}; " for x in evaluation_thisnetwork))
             print(" = best so far: ", *(f"{x:.4f}; " for x in evaluation_bestnetwork))
 
@@ -590,7 +589,7 @@ def train_network(model, task, directory):
             best_network_dict = model.state_dict()
             best_network_error = error.item()
             save_network(model, directory + f'model_best.pth', save_fr=False)
-            evaluation_bestnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
+            evaluation_bestnetwork = task.evaluate_model(model, distractor_probability=task_parameters["distractor_probability"], noise_amplitude=hyperparameters["noise_amplitude"])
 
     result = {
         "error_store": error_store,  # MSE error every training step

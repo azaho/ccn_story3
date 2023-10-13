@@ -35,11 +35,13 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-R1a_si, R1a_ei = 0, model_parameters["dim_recurrent"]//4
+proportion_gate = 0.5
+proportion_R1a = 0.55
+R1a_si, R1a_ei = 0, int(model_parameters["dim_recurrent"]*(1-proportion_gate)*proportion_R1a)
 R1a_i = torch.arange(R1a_si, R1a_ei)
-R1b_si, R1b_ei = model_parameters["dim_recurrent"]//4, (model_parameters["dim_recurrent"]//4)*2
+R1b_si, R1b_ei = R1a_ei, int(model_parameters["dim_recurrent"]*(1-proportion_gate))
 R1b_i = torch.arange(R1b_si, R1b_ei)
-DT_si, DT_ei = (model_parameters["dim_recurrent"]//4)*2, model_parameters["dim_recurrent"]
+DT_si, DT_ei = R1b_ei, model_parameters["dim_recurrent"]
 DT_i = torch.arange(DT_si, DT_ei)
 R1a_pref = R1a_i/len(R1a_i)*360
 R1b_pref = torch.arange(len(R1b_i))/len(R1b_i)*360
@@ -71,7 +73,7 @@ class Model(Model):
         # 2: R1 bias and DT bias
         # 3: R1-DT nonspecific connection magnitude
         # 4: how much R1a-R1b and R1b-R1a curve magnitude differ from intra
-        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.05, -0.05, 0.1]))
+        self.top_parameters = nn.Parameter(torch.tensor([3, -0.5, -0.5])/args.net_size*10)
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -83,8 +85,8 @@ class Model(Model):
         b_ah = torch.zeros_like(self.b_ah)
         W_h_ah[R1a_si:R1a_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1a_pref), 1).T) * self.top_parameters[0]
         W_h_ah[R1b_si:R1b_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1b_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0]-self.top_parameters[3])
-        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0]+self.top_parameters[3])
+        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0])
+        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0])
 
         W_h_ah[R1a_si:R1a_ei, DT_si:DT_ei] = legi(self.R1a_pref.repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1a_pref), 1)) * self.top_parameters[0]
         W_h_ah[R1b_si:R1b_ei, DT_si:DT_ei] = legi(self.R1b_pref.repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1b_pref), 1)) * self.top_parameters[0]

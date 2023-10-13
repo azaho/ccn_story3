@@ -61,7 +61,7 @@ class Model(Model):
         # TRAINABLE PARAMETERS:
         # 1: R1->R1 and input->R1 curve magnitudes
         # 2: R1 bias
-        self.top_parameters = nn.Parameter(torch.tensor([0.2, -0.1]))
+        self.top_parameters = nn.Parameter(torch.tensor([2, -1])/args.net_size*10)
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)

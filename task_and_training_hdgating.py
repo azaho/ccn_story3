@@ -64,7 +64,7 @@ class Model(Model):
         # 1: input-DT, DT-R1, R1-R1 curve magnitude
         # 2: R1 bias and DT bias
         # 3: R1-DT nonspecific connection magnitude
-        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.05, -0.05]))
+        self.top_parameters = nn.Parameter(torch.tensor([3, -0.5, -0.5])/args.net_size*10)
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)

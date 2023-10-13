@@ -354,9 +354,7 @@ def output_connectivity_factors(dir_prefix="data_json/"):
 if __name__ == "__main__":
     # train the network and save weights
     task = Task()
-    model = Model()
-
-    hyperparameters["train_for_steps"] = 100
+    model = Model()f
 
     directory = update_directory_name()
     result = train_network(model, task, directory)

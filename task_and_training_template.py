@@ -82,7 +82,7 @@ def update_directory_name():
     directory += f"{model_parameters['model_name']}_{task_parameters['task_name']}"
     directory += f"_dr{model_parameters['dim_recurrent']}_n{hyperparameters['noise_amplitude']}"
     directory += f"_la{hyperparameters['regularization_lambda']}"
-    if "shift_amount" in model_parameters: directory += f"_sa{model_parameters['shift_amount']}"
+    if "shuffle_amount" in model_parameters: directory += f"_sa{model_parameters['shuffle_amount']}"
     if "legi_exponent" in model_parameters: directory += f"_le{model_parameters['legi_exponent']}"
     if "scale_factor" in model_parameters: directory += f"_sf{model_parameters['scale_factor']}"
     directory += f"_r{hyperparameters['random_string']}"
@@ -148,6 +148,8 @@ def save_training_data(directory, result):
 
 def save_metadata(directory, task, model, result, path=None):
     if path is None: path = directory + "info.json"
+    _path = pathlib.Path(path)
+    _path.parent.mkdir(parents=True, exist_ok=True)
     # save all parameters
     info = {
         "hyperparameters": hyperparameters,

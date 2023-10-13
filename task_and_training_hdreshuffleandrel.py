@@ -8,7 +8,8 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--shuffle_amount', type=float, help='how much to shift tunings?', default=130)
+parser.add_argument('--shuffle_amount', type=float, help='how much to shift tunings?', default=0)
+parser.add_argument('--scale_factor', type=float, help='determines ratio between input-ring and ring-ring connection strengths', default=1)
 args = parser.parse_args()
 # PARSER END
 
@@ -23,10 +24,11 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "hdreshuffleCTRNN",
+    "model_name": "hdreshufflerelCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
     "shuffle_amount": args.shuffle_amount
+    "scale_factor": args.scale_factor
 })
 additional_comments += [
     "Reshuffle of tuning network, training is on top-level parameters + output layer"
@@ -40,8 +42,6 @@ update_random_seed()
 R1_i = torch.arange(model_parameters["dim_recurrent"])
 R1_pref = R1_i/model_parameters["dim_recurrent"]*360
 R1_pref_changes = [random.randint(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"]) for _ in R1_i]
-#R1_pref_changes = torch.linspace(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"], len(R1_i)).detach()
-#print(R1_pref_changes)
 
 
 # Modification of the class Model -- constrain the architecture to this particular solution class
@@ -68,7 +68,7 @@ class Model(Model):
     # noise has shape (batch_size, total_time, dim_recurrent) or (total_time, dim_recurrent)
     def forward(self, input, noise):
         # build matrices based on top-level parameters
-        self.W_h_ah = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
+        self.W_h_ah = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0] * model_parameters["scale_factor"]
         self.W_x_ah = legi((self.R1_pref+self.R1_pref_changes).repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(R1_pref), 1)) * self.top_parameters[0]
         self.W_x_ah = torch.cat((self.W_x_ah, torch.zeros(len(R1_pref)).unsqueeze(1)), 1) # go cue has zero weights
         self.b_ah = torch.ones_like(self.b_ah) * self.top_parameters[1]
@@ -98,8 +98,11 @@ if __name__ == "__main__":
     directory = update_directory_name()
     result = train_network(model, task, directory)
 
-    save_metadata(directory, task, model, result)
-    save_training_data(directory, result)
-    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
-    save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
-    save_analysis_notebooks(directory, args)
+    save_metadata(directory, task, model, result, path="data_json/"+directory[5:-1]+".json")
+
+    # for now, nothing else is necessary
+    # save_metadata(directory, task, model, result, path="data_json/"+directory[5:-1]+".json")
+    # save_training_data(directory, result)
+    # model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
+    # save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
+    # save_analysis_notebooks(directory, args)

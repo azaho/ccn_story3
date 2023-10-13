@@ -15,11 +15,6 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "None",  # options: L1, L2, None
-    "regularization_lambda": 1e-4,
-
-    "train_for_steps": 500,
-    "save_network_every_steps": 500,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -59,8 +54,8 @@ class Model(Model):
 
         # TRAINABLE PARAMETERS:
         # 1: input->R1 curve magnitude
-        # 1: R1->R1 curve magnitude
-        # 2: R1 bias
+        # 2: R1->R1 curve magnitude
+        # 3: R1 bias
         self.top_parameters = nn.Parameter(torch.tensor([0.2, 0.2, -0.1]))
 
     # output y and recurrent unit activations for all trial timesteps

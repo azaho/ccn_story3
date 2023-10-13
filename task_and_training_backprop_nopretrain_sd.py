@@ -8,7 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-4)
+parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=5e-5)
 args = parser.parse_args()
 # PARSER END
 

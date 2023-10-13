@@ -15,11 +15,6 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "None",  # options: L1, L2, None
-    "regularization_lambda": 1e-4,
-
-    "train_for_steps": 500,
-    "save_network_every_steps": 500
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -40,9 +35,10 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-R1a_si, R1a_ei = 0, model_parameters["dim_recurrent"]//2
+proportion_R1a = 0.55
+R1a_si, R1a_ei = 0, int(model_parameters["dim_recurrent"] * proportion_R1a)
 R1a_i = torch.arange(R1a_si, R1a_ei)
-R1b_si, R1b_ei = model_parameters["dim_recurrent"]//2, model_parameters["dim_recurrent"]
+R1b_si, R1b_ei = R1a_ei, model_parameters["dim_recurrent"]
 R1b_i = torch.arange(R1b_si, R1b_ei)
 R1a_pref = R1a_i/len(R1a_i)*360
 R1b_pref = R1b_i/len(R1b_i)*360
@@ -68,8 +64,7 @@ class Model(Model):
         # TRAINABLE PARAMETERS:
         # 1: R1a->R1a, R1b->R1b and input->R1 curve magnitudes
         # 2: R1a and R1b bias
-        # 3: how much R1a-R1b and R1b-R1a curve magnitude differ from intra
-        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.1, 0.1]))
+        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.1]))
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -80,8 +75,8 @@ class Model(Model):
         W_x_ah = torch.zeros((self.dim_recurrent, self.dim_input), dtype=torch.float32)
         W_h_ah[R1a_si:R1a_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1a_pref), 1).T) * self.top_parameters[0]
         W_h_ah[R1b_si:R1b_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1b_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0]-self.top_parameters[2])
-        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0]+self.top_parameters[2])
+        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0])
+        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0])
         W_x_ah[R1a_si:R1a_ei, :-1] = legi(self.R1a_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.R1a_pref), 1)) * self.top_parameters[0]
         W_x_ah[R1b_si:R1b_ei, :-1] = legi(self.R1b_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.R1b_pref), 1)) * self.top_parameters[0]
         self.W_h_ah = W_h_ah

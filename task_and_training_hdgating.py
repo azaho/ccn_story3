@@ -15,11 +15,6 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "None",  # options: L1, L2, None
-    "regularization_lambda": 1e-4,
-
-    "train_for_steps": 500,
-    "save_network_every_steps": 500,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -69,7 +64,7 @@ class Model(Model):
         # 1: input-DT, DT-R1, R1-R1 curve magnitude
         # 2: R1 bias and DT bias
         # 3: R1-DT nonspecific connection magnitude
-        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.05, -0.05, 0.3]))
+        self.top_parameters = nn.Parameter(torch.tensor([0.3, -0.05, -0.05]))
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -82,7 +77,7 @@ class Model(Model):
         W_h_ah[R1_si:R1_ei, R1_si:R1_ei] = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
         W_h_ah[R1_si:R1_ei, DT_si:DT_ei] = legi(self.R1_pref.repeat(len(self.DT_pref), 1), self.DT_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
         W_h_ah[DT_si:DT_ei, R1_si:R1_ei] = torch.ones((len(DT_i), len(R1_i))) * self.top_parameters[2]
-        W_x_ah[DT_si:DT_ei, :-1] = legi(self.DT_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.DT_pref), 1)) * self.top_parameters[3]
+        W_x_ah[DT_si:DT_ei, :-1] = legi(self.DT_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.DT_pref), 1)) * self.top_parameters[0]
         b_ah[R1_si:R1_ei] = torch.ones((len(R1_i),)) * self.top_parameters[1]
         b_ah[DT_si:DT_ei] = torch.ones((len(DT_i),)) * self.top_parameters[1]
 

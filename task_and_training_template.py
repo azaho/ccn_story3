@@ -11,13 +11,18 @@ hyperparameters = {
     "random_string": "AA",  # human-readable string used for random initialization (for reproducibility)
     "noise_amplitude": 0.1,  # normal noise with s.d. = noise_amplitude
     "optimizer": "Adam",  # options: Adam
-    "train_for_steps": 10000,
+    "train_for_steps": 1000,
     "save_network_every_steps": 1000,
     "note_error_every_steps": 50,  # only relevant if verbose is True
     "clip_gradients": True,  # limit gradient size (allows the network to train for a long time without diverging)
     "max_gradient_norm": 10,
-    "regularization": "WC",  # options: L1, L2, spatial_embedding (wiring cost), L1_activity (activity cost), None
-    "regularization_lambda": 2e-5, #1e-4
+    # regularization options:
+    #   L1_weights, L2_weights;
+    #   L1_activity;
+    #   SE_weights (spatial embedding / wiring cost, embeds units in a square grid, see Achterberg & Akarca et al. (2022));
+    #   None.
+    "regularization": "None",
+    "regularization_lambda": 0,
 }
 hyperparameters["random_seed"] = int(hashlib.sha1(hyperparameters["random_string"].encode("utf-8")).hexdigest(), 16) % 10**8  # random initialization seed (for reproducibility)
 if hyperparameters["regularization"] is None or hyperparameters["regularization"].lower() == "none":
@@ -28,7 +33,7 @@ task_parameters = {
     "task_name": "1DIR1O",
     "input_direction_units": net_size,  # how many direction-selective input units?
 
-    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay0_from": 10, "delay0_to": 20,  # range (inclusive) for lengths of variable delays (in timesteps)
     "delay1_from": 10, "delay1_to": 90,
     "delay2_from": 120, "delay2_to": 160,
 
@@ -36,7 +41,8 @@ task_parameters = {
     "show_cue_for": 100,  # in timesteps
     "dim_input": net_size + 1,  # plus one input for go cue signal
     "dim_output": 2,
-    "distractor_visible": True  # train with or without distractor (distractor = O2)?
+    "distractor_visible": True,  # train with or without distractor (distractor = O2)?
+    "distractor_probability": 0.5  # probability that the distractor will be present on any given trial
 }
 
 model_parameters = {
@@ -58,12 +64,12 @@ additional_comments = [
 ]
 
 pretrain_delays = {
-    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay0_from": 10, "delay0_to": 20,  # range (inclusive) for lengths of variable delays (in timesteps)
     "delay1_from": 10, "delay1_to": 30,
     "delay2_from": 60, "delay2_to": 80,
 }
 final_delays = {
-    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
+    "delay0_from": 10, "delay0_to": 20,  # range (inclusive) for lengths of variable delays (in timesteps)
     "delay1_from": 10, "delay1_to": 90,
     "delay2_from": 120, "delay2_to": 160,
 }
@@ -149,9 +155,11 @@ def save_metadata(directory, task, model, result, path=None):
         "model_parameters": model_parameters,
         "additional_comments": additional_comments,
         "directory": directory,
-        "errors": result["errors"],
-        "error_for_ccn": task.evaluate_model(model, show_distractor=True,
-                                             noise_amplitude=hyperparameters["noise_amplitude"]),  # final error of network (for a CCN submission)
+
+        "errors_last": result["errors_last"],
+        "errors_best": result["errors_best"],
+        "error_final": task.evaluate_model(model, show_distractor=True, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network (for a CCN submission)
+
         "error_store_saved": result["error_store_saved"]  # MSE of the network on every training step where the weights were saved
     }
     with open(path, 'w', encoding='utf-8') as f:
@@ -248,7 +256,7 @@ class Task:
         i_direction2 = torch.zeros(task_parameters["dim_input"])
         i_direction2[:task_parameters["input_direction_units"]] = self._input_direction_representation(direction2)
         i_direction2 = i_direction2.repeat(task_parameters["show_direction_for"], 1)
-        i_direction2 = i_direction2*(1 if show_distractor else 0)
+        i_direction2 = i_direction2*(1 if show_distractor and (random.random()<task_parameters["distractor_probability"]) else 0)
         i_delay0 = torch.zeros((delay0, task_parameters["dim_input"]))
         i_delay2 = torch.zeros((delay2, task_parameters["dim_input"]))
 
@@ -383,15 +391,7 @@ class Model(torch.nn.Module):
         b_ah = torch.zeros(dim_recurrent)
         b_y = torch.zeros(dim_output)
 
-        # Saxe at al. 2014 "Exact solutions to the nonlinear dynamics of learning in deep linear neural networks"
-        # # We empirically show that if we choose the initial weights in each layer to be a random orthogonal matrix
-        # # (satisfying W'*W = I), instead of a scaled random Gaussian matrix, then this orthogonal random
-        # # initialization condition yields depth independent learning times just like greedy layer-wise pre-training.
-        W_h_ah = np.random.randn(dim_recurrent, dim_recurrent)
-        u, s, vT = np.linalg.svd(W_h_ah)  # np.linalg.svd returns v transpose!
-        W_h_ah = u @ np.diag(1.0 * np.ones(dim_recurrent)) @ vT  # make the eigenvalues large so they decay slowly
-        W_h_ah = torch.tensor(W_h_ah, dtype=torch.float32)
-        # Sussillo et al. 2015 "A neural network that finds a naturalistic solution for the production of muscle activity"
+        W_h_ah = 1.5 * torch.randn(dim_recurrent, dim_recurrent) / np.sqrt(dim_recurrent)
         W_x_ah = torch.randn(dim_recurrent, dim_input) / np.sqrt(dim_input)
         W_h_y = torch.zeros(dim_output, dim_recurrent)
 
@@ -471,19 +471,6 @@ def train_network(model, task, directory):
     # gradient_norm_store[0] is norm of the gradient before any parameter updates have been made,
     # gradient_norm_store[j] is the norm of the gradient after j parameter updates
     noise_amplitude = hyperparameters["noise_amplitude"]
-    regularization_norm, regularization_lambda = None, None
-    if hyperparameters["regularization"].upper() == "L1":
-        regularization_norm = 1
-        regularization_lambda = hyperparameters["regularization_lambda"]
-    if hyperparameters["regularization"].upper() == "L2":
-        regularization_norm = 2
-        regularization_lambda = hyperparameters["regularization_lambda"]
-    if hyperparameters["regularization"].upper() == "spatial_embedding".upper():
-        regularization_norm = "spatial_embedding"
-        regularization_lambda = hyperparameters["regularization_lambda"]
-    if hyperparameters["regularization"].upper() == "AC":
-        regularization_norm = "L1_activity"
-        regularization_lambda = hyperparameters["regularization_lambda"]
     clip_gradients = hyperparameters["clip_gradients"]
     max_gradient_norm = hyperparameters["max_gradient_norm"]
     set_note_error = list(range(0, max_steps, hyperparameters["note_error_every_steps"]))
@@ -505,21 +492,24 @@ def train_network(model, task, directory):
         # output_mask: (batch_size, total_time, dim_output) tensor, elements
         # 0 (if timestep does not contribute to this term in the error function),
         # 1 (if timestep contributes to this term in the error function)
+
         error = torch.sum((output[output_mask == 1] - target[output_mask == 1]) ** 2, dim=0) / torch.sum(output_mask == 1)
         error_o1 = (error[0] + error[1]).item()
         if model_parameters["dim_output"] == 2:  # Do not remember the second orientation
             error_o2 = 0
         else: error_o2 = (error[2] + error[3]).item()
         error = torch.sum(error)
-        if regularization_norm == 1:
+
+        # add regularization
+        if hyperparameters["regularization"] == "L1_weights":
             for param in model.parameters():
                 if param.requires_grad is True:
-                    error += regularization_lambda * torch.sum(torch.abs(param))
-        if regularization_norm == 2:
+                    error += hyperparameters["regularization_lambda"] * torch.sum(torch.abs(param))
+        elif hyperparameters["regularization"] == "L2_weights":
             for param in model.parameters():
                 if param.requires_grad is True:
-                    error += regularization_lambda * torch.sum(param ** 2)
-        if regularization_norm == "spatial_embedding":
+                    error += hyperparameters["regularization_lambda"] * torch.sum(param ** 2)
+        elif hyperparameters["regularization"] == "SE_weights":  # embeds units in a square grid
             W = torch.abs(model.fc_h2ah.weight)
 
             net_size = model_parameters["dim_recurrent"]
@@ -533,22 +523,24 @@ def train_network(model, task, directory):
             s = torch.matrix_exp(s @ W @ s)
             s.fill_diagonal_(0)
 
-            error += regularization_lambda * torch.sum(W * d * s)
-        if regularization_norm == "L1_activity":
-            error += regularization_lambda * torch.sum(torch.abs(h)) / np.prod(h.shape)
+            error += hyperparameters["regularization_lambda"] * torch.sum(W * d * s)
+        elif hyperparameters["regularization"] == "L1_activity":
+            error += hyperparameters["regularization_lambda"] * torch.sum(torch.abs(h)) / np.prod(h.shape)
 
         error_store[p] = error.item()
         error_store_o1[p] = error_o1
         error_store_o2[p] = error_o2
 
-        # don't train on step 0, just store error
+        # don't train on step 0, just store error and initialize "best" network
         if p == 0:
+            error_store_saved[0] = error.item()
+            evaluation_thisnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
+
             best_network_dict = model.state_dict()
             best_network_error = error.item()
             save_network(model, directory + f'model_best.pth', save_fr=False)
-            error_store_saved[0] = error.item()
-            mse_o1_b, mse_o2_b, err_o1_b, err_o2_b = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"])
-            mse_o1_bn, mse_o2_bn, err_o1_bn, err_o2_bn = task.evaluate_model(model, noise_amplitude=hyperparameters["noise_amplitude"], show_distractor=task_parameters["distractor_visible"])
+            evaluation_bestnetwork = evaluation_thisnetwork
+
             last_time = time.time()  # for estimating how long training will take
             continue
         # Before the backward pass, use the optimizer object to zero all of the
@@ -576,42 +568,35 @@ def train_network(model, task, directory):
         if verbose and np.isin(p, set_note_error):
             error_wo_reg = torch.sum((output[output_mask == 1] - target[output_mask == 1]) ** 2) / torch.sum(
                 output_mask == 1)
-            print(
-                f'{p} parameter updates: error = {error.item():.4g}, w/o reg {error_wo_reg.item():.4g}, o1 {error_o1:.4g}, o2 {error_o2:.4g}')
+            print(f'{p} parameter updates: error = {error.item():.4f}, w/o reg {error_wo_reg.item():.4f}; o1 {error_o1:.4f}, o2 {error_o2:.4f}')
             passed_time = time.time() - last_time
             made_steps = hyperparameters["note_error_every_steps"]
             left_steps = max_steps - p
             left_time = left_steps / made_steps * passed_time
-            print(
-                f" = took {int(passed_time)}s for {made_steps} steps, estimated time left {str(datetime.timedelta(seconds=int(left_time)))}")
+            print(f" = took {passed_time:.1f}s for {made_steps} steps, estimated time left {str(datetime.timedelta(seconds=int(left_time)))}")
             last_time = time.time()
-            mse_o1, mse_o2, err_o1, err_o2 = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"])
-            print(" = performance: ", (mse_o1, mse_o2, err_o1, err_o2))
-            if (err_o1 < err_o1_b) or math.isnan(err_o1_b):
-                best_network_error = 10 ** 8  # to update the best network
-                print(" = best so far: ", (mse_o1, mse_o2, err_o1, err_o2))
-            else:
-                print(" = best so far: ", (mse_o1_b, mse_o2_b, err_o1_b, err_o2_b, err_o1_bn, err_o2_bn))
+            evaluation_thisnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
+            print(" = performance: ", *(f"{x:.4f}; " for x in evaluation_thisnetwork))
+            print(" = best so far: ", *(f"{x:.4f}; " for x in evaluation_bestnetwork))
+
         # save network
         if np.isin(p, set_save_network):
             print("SAVING", f'model_parameterupdate{p}.pth')
             save_network(model, directory + f'model_parameterupdate{p}.pth')
             error_store_saved[p] = error.item()
-        if error.item() < best_network_error:
-            mse_o1, mse_o2, err_o1, err_o2 = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"])
-            if err_o1 < err_o1_b or math.isnan(err_o1_b) or mse_o1<mse_o1_b/1.5:  # only save new best if the <test> error is actually smaller, or if training error is significantly lower
-                best_network_dict = model.state_dict()
-                best_network_error = error.item()
-                save_network(model, directory + f'model_best.pth', save_fr=False)
-                mse_o1_b, mse_o2_b, err_o1_b, err_o2_b = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"])
-                mse_o1_bn, mse_o2_bn, err_o1_bn, err_o2_bn = task.evaluate_model(model, noise_amplitude=hyperparameters["noise_amplitude"], show_distractor=task_parameters["distractor_visible"])
+        if evaluation_thisnetwork[0] < evaluation_bestnetwork[0]:
+            best_network_dict = model.state_dict()
+            best_network_error = error.item()
+            save_network(model, directory + f'model_best.pth', save_fr=False)
+            evaluation_bestnetwork = task.evaluate_model(model, show_distractor=task_parameters["distractor_visible"], noise_amplitude=hyperparameters["noise_amplitude"])
 
     result = {
         "error_store": error_store,  # MSE error every training step
         "error_store_o1": error_store_o1,  # MSE error every training step (only O1=target component)
         "error_store_o2": error_store_o2,  # MSE error every training step (only O2=distractor component) -- only relevant if memorizing distractor too
         "gradient_norm_store": gradient_norm_store,    # backprop gradient norm error every training step
-        "errors": [mse_o1, mse_o2, err_o1, err_o2, mse_o1_b, mse_o2_b, err_o1_b, err_o2_b, mse_o1_bn, mse_o2_bn, err_o1_bn, err_o2_bn],
+        "errors_last": evaluation_thisnetwork,
+        "errors_best": evaluation_bestnetwork,
         "error_store_saved": error_store_saved    # MSE for every training step on which the weights are saved
     }
     return result

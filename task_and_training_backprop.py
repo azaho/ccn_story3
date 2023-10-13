@@ -8,7 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=1e-4)
+parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=0)
 args = parser.parse_args()
 # PARSER END
 
@@ -16,11 +16,11 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-    "regularization": "L2",  # options: L1, L2, None
+    "regularization": "L2_weights",  # options: L1, L2, None
     "regularization_lambda": args.la,
 
-    "train_for_steps": 500,
-    "save_network_every_steps": 1000,
+    "train_for_steps": 30000,
+    "save_network_every_steps": 5000,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -40,20 +40,12 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-train_delays = {
-    "delay0_from": 20, "delay0_to": 40,  # range (inclusive) for lengths of variable delays (in timesteps)
-    "delay1_from": 10, "delay1_to": 90,
-    "delay2_from": 120, "delay2_to": 160,
-}
-
 if __name__ == "__main__":
     # train the network and save weights
     model = Model()
 
-    task_parameters.update(train_delays)
-    hyperparameters["train_for_steps"] = 30000
-    task_parameters["distractor_visible"] = True
     directory = update_directory_name()
+
     task = Task()
     result = train_network(model, task, directory)
 

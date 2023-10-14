@@ -54,3 +54,4 @@ if __name__ == "__main__":
     model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
     save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
     save_analysis_notebooks(directory, args)
+    output_connectivity_factors(directory, task, model)

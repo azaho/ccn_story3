@@ -40,7 +40,7 @@ update_random_seed()
 R1_i = torch.arange(model_parameters["dim_recurrent"])
 R1_pref = R1_i/model_parameters["dim_recurrent"]*360
 R1_pref_changes = [random.randint(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"]) for _ in R1_i]
-#R1_pref_changes = torch.linspace(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"], len(R1_i)).detach()
+#R1_pref_changes = torch.linspace(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"], len(R1_i))[torch.randperm(len(R1_i))].detach()
 #print(R1_pref_changes)
 
 

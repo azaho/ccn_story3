@@ -7,7 +7,7 @@ verbose = True  # print info in console?
 net_size = 100  # size of input layer and recurrent layer
 hyperparameters = {
     "batch_size": 64,
-    "learning_rate": 1e-4,
+    "learning_rate": 1e-3,
     "random_string": "AA",  # human-readable string used for random initialization (for reproducibility)
     "noise_amplitude": 0.1,  # normal noise with s.d. = noise_amplitude
     "optimizer": "Adam",  # options: Adam
@@ -41,7 +41,7 @@ task_parameters = {
     "show_cue_for": 100,  # in timesteps
     "dim_input": net_size + 1,  # plus one input for go cue signal
     "dim_output": 2,
-    "distractor_probability": 0.5  # probability that the distractor will be present on any given trial
+    "distractor_probability": 1.0  # probability that the distractor will be present on any given trial
 }
 
 model_parameters = {
@@ -145,7 +145,7 @@ def save_training_data(directory, result):
     ))
     torch.save(training_dynamics, directory + "training_dynamics.pt")
 
-def save_metadata(directory, task, model, result, path=None):
+def save_metadata(directory, task, model, result, path=None, verbose=True):
     if path is None: path = directory + "info.json"
     _path = pathlib.Path(path)
     _path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,6 +165,8 @@ def save_metadata(directory, task, model, result, path=None):
     }
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(info, f, ensure_ascii=False, indent=4)
+    if verbose:
+        print(info["error_distractor"])
 
 
 # (only for hand-designed networks)

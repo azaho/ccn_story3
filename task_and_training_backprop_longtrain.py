@@ -30,7 +30,7 @@ task_parameters.update({
     "distractor_probability": 1.0,  # probability that the distractor will be present on any given trial
 })
 model_parameters.update({
-    "model_name": "backpropCTRNN",
+    "model_name": "backpropltCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })

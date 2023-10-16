@@ -35,7 +35,7 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-proportion_gate = 0.5
+proportion_gate = 0.55
 proportion_R1a = 0.55
 R1a_si, R1a_ei = 0, int(model_parameters["dim_recurrent"]*(1-proportion_gate)*proportion_R1a)
 R1a_i = torch.arange(R1a_si, R1a_ei)

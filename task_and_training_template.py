@@ -394,7 +394,7 @@ class Model(torch.nn.Module):
         b_ah = torch.zeros(dim_recurrent)
         b_y = torch.zeros(dim_output)
 
-        W_h_ah = 1.5 * torch.randn(dim_recurrent, dim_recurrent) / np.sqrt(dim_recurrent)
+        W_h_ah = torch.randn(dim_recurrent, dim_recurrent) / np.sqrt(dim_recurrent)
         W_x_ah = torch.randn(dim_recurrent, dim_input) / np.sqrt(dim_input)
         W_h_y = torch.zeros(dim_output, dim_recurrent)
 

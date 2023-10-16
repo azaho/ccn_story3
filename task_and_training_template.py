@@ -6,16 +6,13 @@ from torch import nn
 verbose = True  # print info in console?
 net_size = 100  # size of input layer and recurrent layer
 hyperparameters = {
-    "batch_size": 64,
-    "learning_rate": 1e-3,
     "random_string": "AA",  # human-readable string used for random initialization (for reproducibility)
-    "noise_amplitude": 0.1,  # normal noise with s.d. = noise_amplitude
     "optimizer": "Adam",  # options: Adam
-    "train_for_steps": 1000,
-    "save_network_every_steps": 1000,
-    "note_error_every_steps": 50,  # only relevant if verbose is True
+    "noise_amplitude": 0.1,  # normal noise with s.d. = noise_amplitude
+
     "clip_gradients": True,  # limit gradient size (allows the network to train for a long time without diverging)
     "max_gradient_norm": 10,
+
     # regularization options:
     #   L1_weights, L2_weights;
     #   L1_activity;
@@ -23,6 +20,12 @@ hyperparameters = {
     #   None.
     "regularization": "None",
     "regularization_lambda": 0,
+
+    "batch_size": 64,
+    "learning_rate": 1e-4,
+    "train_for_steps": 20000,
+    "save_network_every_steps": 20000,
+    "note_error_every_steps": 50,  # only relevant if verbose is True
 }
 hyperparameters["random_seed"] = int(hashlib.sha1(hyperparameters["random_string"].encode("utf-8")).hexdigest(), 16) % 10**8  # random initialization seed (for reproducibility)
 if hyperparameters["regularization"] is None or hyperparameters["regularization"].lower() == "none":

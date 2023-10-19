@@ -10,6 +10,7 @@ parser.add_argument('--net_size', type=int, help='size of input layer and recurr
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
 parser.add_argument('--shuffle_amount', type=float, help='how much to shift tunings?', default=0)
 parser.add_argument('--scale_factor', type=float, help='determines ratio between input-ring and ring-ring connection strengths', default=1)
+parser.add_argument('--conn_exponent', type=float, help='Exponent of the cosine tuning curve (larger values = narrower tuning)', default=1)
 args = parser.parse_args()
 # PARSER END
 
@@ -17,6 +18,10 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
+
+    "train_for_steps": 2000,
+    "save_network_every_steps": 2000,
+    "learning_rate": 1e-3,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -29,6 +34,8 @@ model_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
     "shuffle_amount": args.shuffle_amount,
     "scale_factor": args.scale_factor,
+
+    "connectivity_cos_exponent": args.conn_exponent,
 })
 additional_comments += [
     "Reshuffle of tuning network, training is on top-level parameters + output layer"

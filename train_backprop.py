@@ -27,7 +27,6 @@ task_parameters.update({
     "task_name": "2DIR1O",
     "input_direction_units": args.net_size,  # how many direction-selective input units?
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-    "distractor_probability": 0.5
 })
 model_parameters.update({
     "model_name": "backpropCTRNN",

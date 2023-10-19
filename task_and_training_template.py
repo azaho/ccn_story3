@@ -22,9 +22,9 @@ hyperparameters = {
     "regularization_lambda": 0,
 
     "batch_size": 64,
-    "learning_rate": 1e-4,
-    "train_for_steps": 20000,
-    "save_network_every_steps": 20000,
+    "learning_rate": 1e-3,
+    "train_for_steps": 1000,
+    "save_network_every_steps": 1000,
     "note_error_every_steps": 50,  # only relevant if verbose is True
 }
 hyperparameters["random_seed"] = int(hashlib.sha1(hyperparameters["random_string"].encode("utf-8")).hexdigest(), 16) % 10**8  # random initialization seed (for reproducibility)
@@ -55,7 +55,9 @@ model_parameters = {
     "tau": 10,  # defines ratio tau/dt (see continuous-time recurrent neural networks)
     "nonlinearity": "retanh",  # options: retanh, tanh
     "input_bias": True,
-    "output_bias": False
+    "output_bias": False,
+
+    "connectivity_cos_exponent": 1,  # for hand-designed models
 }
 
 additional_comments = [
@@ -87,6 +89,7 @@ def update_directory_name():
     if "shuffle_amount" in model_parameters: directory += f"_sa{model_parameters['shuffle_amount']}"
     if "legi_exponent" in model_parameters: directory += f"_le{model_parameters['legi_exponent']}"
     if "scale_factor" in model_parameters: directory += f"_sf{model_parameters['scale_factor']}"
+    if "connectivity_cos_exponent" in model_parameters: directory += f"_e{model_parameters['connectivity_cos_exponent']}"
     directory += f"_dp{task_parameters['distractor_probability']}"
     directory += f"_r{hyperparameters['random_string']}"
     directory += "/"  # needs to end with a slash
@@ -175,8 +178,18 @@ def save_metadata(directory, task, model, result, path=None, verbose=True):
 # (only for hand-designed networks)
 # local-excitation, global-inhibition function to use for the pattern
 # pref1 and pref2 are preferred directions between the units, in degrees
-def legi(pref1, pref2):
-    return torch.cos((pref1-pref2)/180 * torch.pi)
+# for exponent=1, this is regular cosine connectivity; For larger values of the exponent,
+# this becomes a narrower tuning curve.
+def _legi(pref1, pref2, exponent):
+    return ((0.5+0.5*torch.cos((pref1-pref2)/180 * torch.pi))**exponent)
+def _legi_integral(exponent):
+    dx = 1
+    x = torch.arange(-180, 180, dx)
+    y = _legi(x, 0, exponent=exponent)
+    return torch.sum(y) * dx / 360
+def legi(pref1, pref2, exponent=None):
+    if exponent is None: exponent = model_parameters["connectivity_cos_exponent"]
+    return _legi(pref1, pref2, exponent=exponent) - _legi_integral(exponent)
 
 
 class Task:

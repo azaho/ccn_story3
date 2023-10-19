@@ -21,7 +21,7 @@ hyperparameters.update({
 
     "train_for_steps": 200000,
     "save_network_every_steps": 50000,
-    "learning_rate": 1e-4,
+    "learning_rate": 1e-3,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     task_parameters.update(pretrain_delays)
     model_parameters["dim_output"] = 4
     task_parameters["dim_output"] = 4
-    hyperparameters["train_for_steps"] = 20000
+    hyperparameters["train_for_steps"] = 2000
     directory = update_directory_name()
     model_pretrain = Model()
     task = Task_outputO1O2()
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # train the network and save weights
     print("===== SWITCHING =====")
     task_parameters.update(final_delays)
-    hyperparameters["train_for_steps"] = 180000
+    hyperparameters["train_for_steps"] = 18000
     model_parameters["dim_output"] = 2
     task_parameters["dim_output"] = 2
     directory = update_directory_name()

@@ -17,7 +17,8 @@ verbose = True  # print info in console?
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
 
-    "train_for_steps": 20000,
+    "save_network_every_steps": 2000,
+    "learning_rate": 1e-3,
 })
 task_parameters.update({
     "task_name": "2DIR1O",

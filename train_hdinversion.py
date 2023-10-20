@@ -25,8 +25,6 @@ model_parameters.update({
     "model_name": "hdinversionCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-
-    "connectivity_cos_exponent": 10
 })
 additional_comments += [
     "Inversion network, training is on top-level parameters + output layer"

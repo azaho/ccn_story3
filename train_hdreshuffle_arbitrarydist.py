@@ -16,10 +16,6 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-
-    "train_for_steps": 10000,
-    "save_network_every_steps": 1000,
-    "learning_rate": 1e-4,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -43,32 +39,7 @@ update_random_seed()
 
 R1_i = torch.arange(model_parameters["dim_recurrent"])
 R1_pref = R1_i/model_parameters["dim_recurrent"]*360
-init_R1_pref_changes = torch.tensor([random.randint(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"]) for _ in R1_i], dtype=torch.float32)
-_R1_pref_changes = torch.tensor([ -16.19837957, -148.42563379,  -79.94662035,  -82.69045576,
-         52.85646314,   -6.67177776,   39.77066947,  126.95941701,
-         45.28775858, -117.86083994,   54.92880576,  -35.38049   ,
-        133.65145709,  100.45417771,   67.83726427,  102.19888451,
-        -51.5835251 ,   15.12381985, -174.23781434,    9.51869657,
-        139.71146824,  132.49722274,   74.55190691,  116.08366151,
-        -24.58256823,  143.53013095,   -3.58208184,   43.24614679,
-         39.77087547,   64.57636837,   25.6576302 ,  -12.1295287 ,
-       -156.34509518,   64.80214886,  -27.89189971,  -34.87153853,
-          4.31177976,   21.58028449,   53.68073894,  -15.20054368,
-         19.33314643, -153.13003138,   18.58887844,  171.20595085,
-        144.63077835, -166.20933081,  -75.12412961,  -32.5517472 ,
-       -146.05804123,   -3.70273063,   92.79271436,  -56.57357836,
-       -146.55098713,  174.84014582, -154.05888144, -148.27574516,
-       -143.94547233, -123.38517774, -134.91012231, -162.51367931,
-        -30.52452255, -171.70889294], dtype=torch.float32)
-
-proportion_R1a = 0.55
-num_R1a = int(net_size * proportion_R1a)
-init_R1_pref_changes = torch.tensor([0]*num_R1a + [180]*(net_size-num_R1a), dtype=torch.float32)
-init_R1_pref_changes = init_R1_pref_changes[torch.randperm(net_size)]#torch.cat((init_R1_pref_changes[::2], init_R1_pref_changes[1::2]))
-#R1_pref = torch.cat((torch.arange(num_R1a)/num_R1a*360, torch.arange((net_size-num_R1a))/(net_size-num_R1a)*360))
-
 init_R1_pref_changes = torch.zeros(net_size)
-#init_R1_pref_changes = torch.randn(net_size) * 180
 
 # Modification of the class Model -- constrain the architecture to this particular solution class
 class Model(Model):

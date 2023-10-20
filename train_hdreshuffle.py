@@ -16,10 +16,6 @@ verbose = True  # print info in console?
 
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
-
-    "train_for_steps": 10000,
-    "save_network_every_steps": 1000,
-    "learning_rate": 1e-4,
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -30,7 +26,7 @@ model_parameters.update({
     "model_name": "hdreshuffleCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-    "shuffle_amount": args.shuffle_amount
+    "shuffle_amount": args.shuffle_amount,
 })
 additional_comments += [
     "Reshuffle of tuning network, training is on top-level parameters + output layer"

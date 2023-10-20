@@ -17,8 +17,7 @@ verbose = True  # print info in console?
 hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
 
-    "save_network_every_steps": 2000,
-    "learning_rate": 1e-3,
+    "learning_rate": 1e-3
 })
 task_parameters.update({
     "task_name": "2DIR1O",
@@ -26,10 +25,10 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "hdreshuffle_ad_blrCTRNN",
+    "model_name": "hdreshuffleCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-    "shuffle_amount": args.shuffle_amount
+    "shuffle_amount": args.shuffle_amount,
 })
 additional_comments += [
     "Reshuffle of tuning network, training is on top-level parameters + output layer"
@@ -42,7 +41,11 @@ update_random_seed()
 
 R1_i = torch.arange(model_parameters["dim_recurrent"])
 R1_pref = R1_i/model_parameters["dim_recurrent"]*360
-init_R1_pref_changes = torch.zeros(net_size)
+R1_pref_changes = 2*(torch.rand(len(R1_i))-0.5) * model_parameters["shuffle_amount"]
+R1_pref_changes = torch.randn(len(R1_i)) * model_parameters["shuffle_amount"]
+#R1_pref_changes = torch.linspace(-model_parameters["shuffle_amount"], model_parameters["shuffle_amount"], len(R1_i))[torch.randperm(len(R1_i))].detach()
+#print(R1_pref_changes)
+
 
 # Modification of the class Model -- constrain the architecture to this particular solution class
 class Model(Model):
@@ -53,6 +56,7 @@ class Model(Model):
         self.b_ah = torch.zeros(self.dim_recurrent)
         self.b_y = torch.zeros(self.dim_output)
 
+        self.R1_pref_changes = torch.tensor(R1_pref_changes)
         self.R1_i = R1_i
         self.R1_pref = R1_pref
         self.IN_pref = torch.arange(task_parameters["input_direction_units"])/task_parameters["input_direction_units"]*360
@@ -60,9 +64,7 @@ class Model(Model):
         # TRAINABLE PARAMETERS:
         # 1: R1->R1 and input->R1 curve magnitudes
         # 2: R1 bias
-        # Additionally: all the preference changes of R1 units
         self.top_parameters = nn.Parameter(torch.tensor([2, -1])/args.net_size*10)
-        self.R1_pref_changes = nn.Parameter(init_R1_pref_changes/1800)#init_R1_pref_changes/180
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -70,7 +72,7 @@ class Model(Model):
     def forward(self, input, noise):
         # build matrices based on top-level parameters
         self.W_h_ah = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
-        self.W_x_ah = legi((self.R1_pref+self.R1_pref_changes*1800).repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(R1_pref), 1)) * self.top_parameters[0]
+        self.W_x_ah = legi((self.R1_pref+self.R1_pref_changes).repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(R1_pref), 1)) * self.top_parameters[0]
         self.W_x_ah = torch.cat((self.W_x_ah, torch.zeros(len(R1_pref)).unsqueeze(1)), 1) # go cue has zero weights
         self.b_ah = torch.ones_like(self.b_ah) * self.top_parameters[1]
 

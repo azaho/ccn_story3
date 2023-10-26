@@ -6,7 +6,7 @@ from task_and_training_template import *
 
 # PARSER START
 parser = argparse.ArgumentParser(description='Train networks')
-parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
+parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
 parser.add_argument('--la', type=float, help='L2 regularization coefficient', default=0)
 args = parser.parse_args()
@@ -30,6 +30,8 @@ model_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 additional_comments += [
+    "Trained with Adam from a random initialization",
+    "The first 10% of training time, the networks are trained on the task where the network has to output target AND distractor"
 ]
 
 #%FINAL_PARAMETERS_HERE%
@@ -38,12 +40,13 @@ directory = update_directory_name()
 update_random_seed()
 
 if __name__ == "__main__":
+    total_train_steps = hyperparameters["train_for_steps"]
 
     # train the network and save weights
     task_parameters.update(pretrain_delays)
     model_parameters["dim_output"] = 4
     task_parameters["dim_output"] = 4
-    hyperparameters["train_for_steps"] = 2000
+    hyperparameters["train_for_steps"] = total_train_steps//10
     directory = update_directory_name()
     model_pretrain = Model()
     task = Task_outputO1O2()
@@ -52,7 +55,7 @@ if __name__ == "__main__":
     # train the network and save weights
     print("===== SWITCHING =====")
     task_parameters.update(final_delays)
-    hyperparameters["train_for_steps"] = 18000
+    hyperparameters["train_for_steps"] = total_train_steps*9//10
     model_parameters["dim_output"] = 2
     task_parameters["dim_output"] = 2
     directory = update_directory_name()

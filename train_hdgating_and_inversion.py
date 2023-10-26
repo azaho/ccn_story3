@@ -6,8 +6,10 @@ from task_and_training_template import *
 
 # PARSER START
 parser = argparse.ArgumentParser(description='Train networks')
-parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
+parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
+parser.add_argument('--gate_proportion', type=float, help='proportion of gate units in the RNN', default=0.6)
+parser.add_argument('--stable_unit_proportion', type=float, help='proportion of stable recurrent units in the RNN', default=0.55)
 args = parser.parse_args()
 # PARSER END
 
@@ -35,8 +37,8 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-proportion_gate = 0.5
-proportion_R1a = 0.55
+proportion_gate = args.gate_proportion
+proportion_R1a = args.stable_unit_proportion
 R1a_si, R1a_ei = 0, int(model_parameters["dim_recurrent"]*(1-proportion_gate)*proportion_R1a)
 R1a_i = torch.arange(R1a_si, R1a_ei)
 R1b_si, R1b_ei = R1a_ei, int(model_parameters["dim_recurrent"]*(1-proportion_gate))

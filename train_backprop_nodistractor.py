@@ -23,6 +23,7 @@ task_parameters.update({
     "task_name": "2DIR1O",
     "input_direction_units": args.net_size,  # how many direction-selective input units?
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
+    "distractor_probability": 0.0  # probability that the distractor will be present on any given trial
 })
 model_parameters.update({
     "model_name": "backpropCTRNN",
@@ -30,7 +31,7 @@ model_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 additional_comments += [
-    "Networks trained with Adam from a random initialization."
+    "Networks trained with Adam from a random initialization, but with no distractor in the task"
 ]
 
 #%FINAL_PARAMETERS_HERE%

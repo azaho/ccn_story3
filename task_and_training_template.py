@@ -24,8 +24,8 @@ hyperparameters = {
     "batch_size": 64,
     "note_error_every_steps": 50,  # only relevant if verbose is True
 
-    "train_for_steps": 20000,
-    "save_network_every_steps": 20000,
+    "train_for_steps": 5000,
+    "save_network_every_steps": 1000,
     "learning_rate": 1e-4,
 }
 hyperparameters["random_seed"] = int(hashlib.sha1(hyperparameters["random_string"].encode("utf-8")).hexdigest(), 16) % 10**8  # random initialization seed (for reproducibility)

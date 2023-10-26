@@ -6,7 +6,7 @@ from task_and_training_template import *
 
 # PARSER START
 parser = argparse.ArgumentParser(description='Train networks')
-parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=100)
+parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
 args = parser.parse_args()
 # PARSER END

@@ -7,9 +7,7 @@ from task_and_training_template import *
 # PARSER START
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
-parser.add_argument('--shuffle_amount', type=float, help='how much to shift tunings?', default=130)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--gate_proportion', type=float, help='proportion of gate units in the RNN', default=0.6)
 args = parser.parse_args()
 # PARSER END
 
@@ -24,13 +22,12 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "hdgating_and_reshuffleCTRNN",
+    "model_name": "hdgating_and_inversion_asymmetricweightsCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-    "shuffle_amount": args.shuffle_amount,
 })
 additional_comments += [
-    "Gating+Reshuffle network, training is on top-level parameters + output layer"
+    "Gating+Inversion network, training is on top-level parameters + output layer"
 ]
 
 #%FINAL_PARAMETERS_HERE%
@@ -38,14 +35,15 @@ additional_comments += [
 directory = update_directory_name()
 update_random_seed()
 
-proportion_gate = args.gate_proportion
-R1_si, R1_ei = 0, int(model_parameters["dim_recurrent"]*(1-proportion_gate))
-R1_i = torch.arange(R1_si, R1_ei)
-DT_si, DT_ei = R1_ei, model_parameters["dim_recurrent"]
+R1a_si, R1a_ei = 0, model_parameters["dim_recurrent"]//4
+R1a_i = torch.arange(R1a_si, R1a_ei)
+R1b_si, R1b_ei = model_parameters["dim_recurrent"]//4, (model_parameters["dim_recurrent"]//4)*2
+R1b_i = torch.arange(R1b_si, R1b_ei)
+DT_si, DT_ei = (model_parameters["dim_recurrent"]//4)*2, model_parameters["dim_recurrent"]
 DT_i = torch.arange(DT_si, DT_ei)
-R1_pref = R1_i/len(R1_i)*360
+R1a_pref = R1a_i/len(R1a_i)*360
+R1b_pref = torch.arange(len(R1b_i))/len(R1b_i)*360
 DT_pref = DT_i/len(DT_i)*360
-init_R1_pref_changes = torch.zeros(len(R1_i))
 
 
 # Modification of the class Model -- constrain the architecture to this particular solution class
@@ -57,11 +55,14 @@ class Model(Model):
         self.b_ah = torch.zeros(self.dim_recurrent)
         self.b_y = torch.zeros(self.dim_output)
 
-        self.R1_si, self.R1_ei = R1_si, R1_ei
-        self.R1_i = R1_i
+        self.R1a_si, self.R1a_ei = R1a_si, R1a_ei
+        self.R1a_i = R1a_i
+        self.R1b_si, self.R1b_ei = R1b_si, R1b_ei
+        self.R1b_i = R1b_i
         self.DT_si, self.DT_ei = DT_si, DT_ei
         self.DT_i = DT_i
-        self.R1_pref = R1_pref
+        self.R1a_pref = R1a_pref
+        self.R1b_pref = R1b_pref
         self.DT_pref = DT_pref
         self.IN_pref = torch.arange(task_parameters["input_direction_units"])/task_parameters["input_direction_units"]*360
 
@@ -69,9 +70,8 @@ class Model(Model):
         # 1: input-DT, DT-R1, R1-R1 curve magnitude
         # 2: R1 bias and DT bias
         # 3: R1-DT nonspecific connection magnitude
-        # Additionally: all the preference changes of R1 units
-        self.top_parameters = nn.Parameter(torch.tensor([3, -0.5, -0.5])/args.net_size*10)
-        self.R1_pref_changes = nn.Parameter(init_R1_pref_changes/1800)
+        # 4: how much R1a-R1b and R1b-R1a curve magnitude differ from intra
+        self.top_parameters = nn.Parameter(torch.tensor([3, -0.5, -0.5, 1])/args.net_size*10)
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -81,13 +81,20 @@ class Model(Model):
         W_h_ah = torch.zeros((self.dim_recurrent, self.dim_recurrent), dtype=torch.float32)
         W_x_ah = torch.zeros((self.dim_recurrent, self.dim_input), dtype=torch.float32)
         b_ah = torch.zeros_like(self.b_ah)
-        W_h_ah[R1_si:R1_ei, R1_si:R1_ei] = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1_si:R1_ei, DT_si:DT_ei] = legi((self.R1_pref+self.R1_pref_changes*1800).repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1_pref), 1)) * self.top_parameters[0]
+        W_h_ah[R1a_si:R1a_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1a_pref), 1).T) * self.top_parameters[0]
+        W_h_ah[R1b_si:R1b_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1b_pref), 1).T) * self.top_parameters[0]
+        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0]-self.top_parameters[3])
+        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0]+self.top_parameters[3])
 
-        W_h_ah[DT_si:DT_ei, R1_si:R1_ei] = torch.ones((len(DT_i), len(R1_i))) * self.top_parameters[2]
+        W_h_ah[R1a_si:R1a_ei, DT_si:DT_ei] = legi(self.R1a_pref.repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1a_pref), 1)) * self.top_parameters[0]
+        W_h_ah[R1b_si:R1b_ei, DT_si:DT_ei] = legi(self.R1b_pref.repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1b_pref), 1)) * self.top_parameters[0]
+
+        W_h_ah[DT_si:DT_ei, R1a_si:R1a_ei] = torch.ones((len(DT_i), len(R1a_i))) * self.top_parameters[2]
+        W_h_ah[DT_si:DT_ei, R1b_si:R1b_ei] = torch.ones((len(DT_i), len(R1b_i))) * self.top_parameters[2]
 
         W_x_ah[DT_si:DT_ei, :-1] = legi(self.DT_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.DT_pref), 1)) * self.top_parameters[0]
-        b_ah[R1_si:R1_ei] = torch.ones((len(R1_i),)) * self.top_parameters[1]
+        b_ah[R1a_si:R1a_ei] = torch.ones((len(R1a_i),)) * self.top_parameters[1]
+        b_ah[R1b_si:R1b_ei] = torch.ones((len(R1b_i),)) * self.top_parameters[1]
         b_ah[DT_si:DT_ei] = torch.ones((len(DT_i),)) * self.top_parameters[1]
 
         self.W_h_ah = W_h_ah

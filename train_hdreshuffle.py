@@ -37,7 +37,7 @@ update_random_seed()
 
 R1_i = torch.arange(model_parameters["dim_recurrent"])
 R1_pref = R1_i/model_parameters["dim_recurrent"]*360
-init_R1_pref_changes = torch.zeros(net_size)
+init_R1_pref_changes = torch.zeros(len(R1_i))
 
 # Modification of the class Model -- constrain the architecture to this particular solution class
 class Model(Model):

@@ -37,9 +37,9 @@ directory = update_directory_name()
 update_random_seed()
 
 gate_proportion = args.gate_proportion
-R1_si, R1_ei = 0, int(model_parameters["dim_recurrent"]*gate_proportion)
+R1_si, R1_ei = 0, int(model_parameters["dim_recurrent"]*(1-gate_proportion))
 R1_i = torch.arange(R1_si, R1_ei)
-DT_si, DT_ei = int(model_parameters["dim_recurrent"]*gate_proportion), model_parameters["dim_recurrent"]
+DT_si, DT_ei = R1_ei, model_parameters["dim_recurrent"]
 DT_i = torch.arange(DT_si, DT_ei)
 R1_pref = R1_i/len(R1_i)*360
 DT_pref = DT_i/len(DT_i)*360
@@ -77,7 +77,7 @@ class Model(Model):
         W_x_ah = torch.zeros((self.dim_recurrent, self.dim_input), dtype=torch.float32)
         b_ah = torch.zeros_like(self.b_ah)
         W_h_ah[R1_si:R1_ei, R1_si:R1_ei] = legi(self.R1_pref.repeat(len(self.R1_pref), 1), self.R1_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1_si:R1_ei, DT_si:DT_ei] = legi(self.R1_pref.repeat(len(self.DT_pref), 1), self.DT_pref.repeat(len(self.R1_pref), 1).T) * self.top_parameters[0]
+        W_h_ah[R1_si:R1_ei, DT_si:DT_ei] = legi(self.R1_pref.repeat(len(self.DT_pref), 1).T, self.DT_pref.repeat(len(self.R1_pref), 1)) * self.top_parameters[0]
         W_h_ah[DT_si:DT_ei, R1_si:R1_ei] = torch.ones((len(DT_i), len(R1_i))) * self.top_parameters[2]
         W_x_ah[DT_si:DT_ei, :-1] = legi(self.DT_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.DT_pref), 1)) * self.top_parameters[0]
         b_ah[R1_si:R1_ei] = torch.ones((len(R1_i),)) * self.top_parameters[1]

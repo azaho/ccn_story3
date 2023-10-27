@@ -166,8 +166,8 @@ def save_metadata(directory, task, model, result, path=None, verbose=True):
 
         "errors_last": result["errors_last"],
         "errors_best": result["errors_best"],
-        "error_distractor": task.evaluate_model(model, distractor_probability=1, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network (for a CCN submission)
-
+        "error_distractor": task.evaluate_model(model, distractor_probability=1, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network
+        "error_nodistractor": task.evaluate_model(model, distractor_probability=0, noise_amplitude=hyperparameters["noise_amplitude"], direction_resolution=30),  # final error of network
         "error_store_saved": result["error_store_saved"]  # MSE of the network on every training step where the weights were saved
     }
     with open(path, 'w', encoding='utf-8') as f:

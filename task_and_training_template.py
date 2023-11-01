@@ -627,7 +627,6 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
         Performs the analysis determining the structural/functional ratios,
         and outputs them into a json and pdf file for this network.
     """
-
     import json, torch, math
     import numpy as np
     import matplotlib.pyplot as plt
@@ -636,6 +635,7 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
     import scipy.stats
     from matplotlib.ticker import FormatStrFormatter
     from scipy.optimize import curve_fit
+
     analyze_network = "final"  # options: "best", "final", <parameter update step no>
     noise_amplitude = 0.1  # if run analyses with noise, noise amplitude
     show_figures = True  # True if running in jupyter notebook; False if running a .py file
@@ -774,7 +774,7 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
                     weights.append(w_ij.item())
         return np.array(distances), np.array(weights)
 
-    def plot_recurrentweights(timestep, ax, lim=0.1, color="green"):
+    def plot_recurrentweights(timestep, ax, lim=0.1, color="green", fit_curves=True):
         x, y = get_connplot_graph(R1_i, calc_pref(R1_i, timestep, to=1), R1_i, calc_pref(R1_i, timestep, to=1))
         bins = np.linspace(-180, 180, 20)
         x_binned = []
@@ -805,7 +805,8 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
 
         params, covariance = curve_fit(cosine_fit, x_binned, y_binned)
         y_fit = cosine_fit(x_binned, *params)
-        ax.plot(x_binned, y_fit, "--", color=color, linewidth=3)
+        if fit_curves:
+            ax.plot(x_binned, y_fit, "--", color=color, linewidth=3)
         return params
 
     def get_connplot_iu_graph(units_id, unit_pref, sm=0):
@@ -831,7 +832,7 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
                     weights.append(w_ij.item())
         return np.array(distances), np.array(weights)
 
-    def plot_inputweights(timestep, ax, color="green", lim=0.1):
+    def plot_inputweights(timestep, ax, color="green", lim=0.1, fit_curves=True):
         x, y = get_connplot_iu_graph(R1_i, calc_pref(R1_i, timestep, to=1))
         bins = np.linspace(-180, 180, 20)
         x_binned = []
@@ -861,12 +862,13 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
 
         params, covariance = curve_fit(cosine_fit, x_binned, y_binned)
         y_fit = cosine_fit(x_binned, *params)
-        ax.plot(x_binned, y_fit, "--", color=color, linewidth=3)
+        if fit_curves:
+            ax.plot(x_binned, y_fit, "--", color=color, linewidth=3)
         return params
 
     fig = plt.figure(figsize=(8, 8))
-    lim = 0.2
-    plt.rc('font', **{'family': 'DejaVu Sans', 'weight': 'normal', 'size': 17})
+    lim = 0.1
+    plt.rc('font', **{'family': 'Arial', 'weight': 'normal', 'size': 17})
     ax1 = fig.add_subplot(2, 2, 1)
     ax1.set_ylabel("weight")
     params_recurrent_cue = plot_recurrentweights((t1 + t2) // 2, ax1, color="k", lim=lim)
@@ -876,8 +878,21 @@ def output_connectivity_factors(directory, task, model, dir_prefix="data_json/")
     params_input_cue = plot_inputweights((t1 + t2) // 2, ax3, color=targetinput_color, lim=lim)
     params_input_delay = plot_inputweights((t2 + t3) // 2, fig.add_subplot(2, 2, 4), color=distractor_color, lim=lim)
     plt.tight_layout()
-
     plt.savefig(dir_prefix+directory[5:-1] + "_connectivity.pdf", bbox_inches="tight")
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.rc('font', **{'family': 'Arial', 'weight': 'normal', 'size': 17})
+    ax1 = fig.add_subplot(2, 2, 1)
+    ax1.set_ylabel("weight")
+    params_recurrent_cue = plot_recurrentweights((t1 + t2) // 2, ax1, color="k", lim=lim, fit_curves=False)
+    params_recurrent_delay = plot_recurrentweights((t2 + t3) // 2, fig.add_subplot(2, 2, 2), color="k", lim=lim, fit_curves=False)
+    ax3 = fig.add_subplot(2, 2, 3)
+    ax3.set_ylabel("weight")
+    params_input_cue = plot_inputweights((t1 + t2) // 2, ax3, color=targetinput_color, lim=lim, fit_curves=False)
+    params_input_delay = plot_inputweights((t2 + t3) // 2, fig.add_subplot(2, 2, 4), color=distractor_color, lim=lim, fit_curves=False)
+    plt.tight_layout()
+    plt.savefig(dir_prefix+directory[5:-1] + "_connectivity_nofit.pdf", bbox_inches="tight")
+
     factors = {
         "structural_factor": params_recurrent_delay[0] / params_input_cue[0],
         "functional_factor": params_input_cue[0] / params_input_delay[0]

@@ -18,6 +18,9 @@ hyperparameters.update({
     "random_string": str(args.random),  # human-readable string used for random initialization (for reproducibility)
     "regularization": "L2_weights",  # options: L1, L2, None
     "regularization_lambda": args.la,
+
+    "train_for_steps": 50000,
+    "save_network_every_steps": 5000,
 })
 task_parameters.update({
     "task_name": "2DIR1O",

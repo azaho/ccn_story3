@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
 parser.add_argument('--shuffle_amount', type=float, help='how much to shift tunings?', default=130)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
-parser.add_argument('--gate_proportion', type=float, help='proportion of gate units in the RNN', default=0.6)
+parser.add_argument('--gate_proportion', type=float, help='proportion of gate units in the RNN', default=0.5)
 args = parser.parse_args()
 # PARSER END
 

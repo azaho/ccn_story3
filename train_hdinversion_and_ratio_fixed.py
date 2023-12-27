@@ -8,6 +8,7 @@ from task_and_training_template import *
 parser = argparse.ArgumentParser(description='Train networks')
 parser.add_argument('--net_size', type=int, help='size of input layer and recurrent layer', default=net_size)
 parser.add_argument('--random', type=str, help='human-readable string used for random initialization', default="AA")
+parser.add_argument('--scale_factor', type=float, help='determines ratio between input-ring and ring-ring connection strengths', default=1)
 parser.add_argument('--stable_unit_proportion', type=float, help='proportion of stable recurrent units in the RNN', default=0.55)
 args = parser.parse_args()
 # PARSER END
@@ -26,6 +27,7 @@ model_parameters.update({
     "model_name": "hdinversionCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
+    "scale_factor": args.scale_factor,
     "stable_unit_proportion": args.stable_unit_proportion
 })
 additional_comments += [
@@ -66,7 +68,7 @@ class Model(Model):
         # TRAINABLE PARAMETERS:
         # 1: R1a->R1a, R1b->R1b and input->R1 curve magnitudes
         # 2: R1a and R1b bias
-        self.top_parameters = nn.Parameter(torch.tensor([3, -1])/args.net_size*10)
+        self.top_parameters = nn.Parameter(torch.tensor([3/args.scale_factor**0.5, -1])/args.net_size*10)
 
     # output y and recurrent unit activations for all trial timesteps
     # input has shape (batch_size, total_time, dim_input) or (total_time, dim_input)
@@ -75,10 +77,10 @@ class Model(Model):
         # build matrices based on top-level parameters
         W_h_ah = torch.zeros((self.dim_recurrent, self.dim_recurrent), dtype=torch.float32)
         W_x_ah = torch.zeros((self.dim_recurrent, self.dim_input), dtype=torch.float32)
-        W_h_ah[R1a_si:R1a_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1a_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1b_si:R1b_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1b_pref), 1).T) * self.top_parameters[0]
-        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0])
-        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0])
+        W_h_ah[R1a_si:R1a_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1a_pref), 1).T) * self.top_parameters[0] * model_parameters["scale_factor"]
+        W_h_ah[R1b_si:R1b_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1b_pref), 1).T) * self.top_parameters[0] * model_parameters["scale_factor"]
+        W_h_ah[R1b_si:R1b_ei, R1a_si:R1a_ei] = legi(self.R1a_pref.repeat(len(self.R1b_pref), 1), self.R1b_pref.repeat(len(self.R1a_pref), 1).T) * (-self.top_parameters[0]) * model_parameters["scale_factor"]
+        W_h_ah[R1a_si:R1a_ei, R1b_si:R1b_ei] = legi(self.R1b_pref.repeat(len(self.R1a_pref), 1), self.R1a_pref.repeat(len(self.R1b_pref), 1).T) * (-self.top_parameters[0]) * model_parameters["scale_factor"]
         W_x_ah[R1a_si:R1a_ei, :-1] = legi(self.R1a_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.R1a_pref), 1)) * self.top_parameters[0]
         W_x_ah[R1b_si:R1b_ei, :-1] = legi(self.R1b_pref.repeat(task_parameters["input_direction_units"], 1).T, self.IN_pref.repeat(len(self.R1b_pref), 1)) * self.top_parameters[0]
         self.W_h_ah = W_h_ah
@@ -110,8 +112,12 @@ if __name__ == "__main__":
     directory = update_directory_name()
     result = train_network(model, task, directory)
 
-    save_metadata(directory, task, model, result)
-    save_training_data(directory, result)
-    model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
-    save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
-    save_analysis_notebooks(directory, args)
+    save_metadata(directory, task, model, result, path="data_json/"+directory[5:-1]+".json")
+    output_connectivity_factors(directory, task, model)
+
+    # for now, nothing else is necessary
+    # save_metadata(directory, task, model, result)
+    # save_training_data(directory, result)
+    # model.save_firing_rates(task, "data_npy/" + directory[5:-1] + ".npy")
+    # save_metadata(directory, task, model, result, path="data_npy/" + directory[5:-1] + ".json")
+    # save_analysis_notebooks(directory, args)

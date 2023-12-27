@@ -27,6 +27,8 @@ model_parameters.update({
     "model_name": "hdgating_and_inversionCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
+    "stable_unit_proportion": args.stable_unit_proportion,
+    "gate_proportion": args.gate_proportion,
 })
 additional_comments += [
     "Gating+Inversion network, training is on top-level parameters + output layer"

@@ -27,7 +27,7 @@ model_parameters.update({
     "model_name": "hdgating_and_inversionCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
-    "stable_unit_proportion": args.stable_unit_proportion,
+#    "stable_unit_proportion": args.stable_unit_proportion,  # uncomment if you want this information recorded
     "gate_proportion": args.gate_proportion,
 })
 additional_comments += [

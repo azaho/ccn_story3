@@ -24,7 +24,7 @@ task_parameters.update({
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
 })
 model_parameters.update({
-    "model_name": "hdinversionCTRNN",
+    "model_name": "hdinversion_and_ratioCTRNN",
     "dim_recurrent": args.net_size,
     "dim_input": args.net_size + 1,  # plus one input for go cue signal
     "scale_factor": args.scale_factor,

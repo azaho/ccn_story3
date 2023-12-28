@@ -91,7 +91,7 @@ def update_directory_name():
     if "legi_exponent" in model_parameters: directory += f"_le{model_parameters['legi_exponent']}"
     if "scale_factor" in model_parameters: directory += f"_sf{model_parameters['scale_factor']}"
     if "connectivity_cos_exponent" in model_parameters: directory += f"_e{model_parameters['connectivity_cos_exponent']}"
-    if "stable_unit_proportion" in model_parameters: durectory += f"_sup{model_parameters['stable_unit_proportion']}"
+    if "stable_unit_proportion" in model_parameters: directory += f"_sup{model_parameters['stable_unit_proportion']}"
     directory += f"_dp{task_parameters['distractor_probability']}"
     directory += f"_r{hyperparameters['random_string']}"
     directory += "/"  # needs to end with a slash

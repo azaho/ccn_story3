@@ -503,7 +503,21 @@ def train_network(model, task, directory):
 
     best_network_dict = None
     best_network_error = None
+    stop_training = False
     for p in range(max_steps + 1):
+        if stop_training:  # if training stopped, just record the errors
+            error_store[p] = error_store[p-1]
+            error_store_o1[p] = error_store_o1[p-1]
+            error_store_o2[p] = error_store_o2[p-1]
+            gradient_norm_store[p] = gradient_norm_store[p-1]
+
+            # save network
+            if np.isin(p, set_save_network):
+                print("SAVING", f'model_parameterupdate{p}.pth')
+                save_network(model, directory + f'model_parameterupdate{p}.pth')
+                error_store_saved[p] = error.item()
+            continue
+
         _, _, delay0, delay1, delay2 = task.choose_trial_parameters()  # choose the delays for this batch
         input, target, output_mask = task.make_random_directions_batch(batch_size, delay0, delay1, delay2, distractor_probability=task_parameters["distractor_probability"])
         noise_mask = task.get_noise_mask(delay0, delay1, delay2)
@@ -610,6 +624,13 @@ def train_network(model, task, directory):
             best_network_error = error.item()
             save_network(model, directory + f'model_best.pth', save_fr=False)
             evaluation_bestnetwork = task.evaluate_model(model, distractor_probability=task_parameters["distractor_probability"], noise_amplitude=hyperparameters["noise_amplitude"])
+
+            if "stop_training_at" in hyperparameters:
+                # only for networks for which this parameter is set,
+                # stop training once the network reaches a certain performance threshold.
+                if evaluation_thisnetwork[2] < hyperparameters["stop_training_at"]:
+                    print("STOPPING TRAINING")
+                    stop_training = True
 
     result = {
         "error_store": error_store,  # MSE error every training step

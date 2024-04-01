@@ -19,7 +19,9 @@ hyperparameters.update({
     "regularization": "L2_weights",  # options: L1, L2, None
     "regularization_lambda": args.la,
 
+    "train_for_steps": 15000,
     "learning_rate": 1e-4,
+    "stop_training_at": 10 # at which MSE err in degrees should the training be stopped?
 })
 task_parameters.update({
     "task_name": "2DIR1O",
